@@ -1,6 +1,6 @@
 import json, urllib.error, urllib.request
 class CollectorClient:
-    def __init__(self,base_url,token,timeout=15): self.url=base_url.rstrip('/')+'/api/internal/collector/import'; self.token=token; self.timeout=timeout
+    def __init__(self,base_url,token,timeout=15): self.url=base_url.rstrip('/')+'/api/internal/collector/import'; self.token=token.strip(); self.timeout=timeout
     def send(self,payload):
         data=json.dumps(payload,ensure_ascii=False).encode(); req=urllib.request.Request(self.url,data=data,method='POST',headers={'Content-Type':'application/json','Authorization':'Bearer '+self.token})
         try:

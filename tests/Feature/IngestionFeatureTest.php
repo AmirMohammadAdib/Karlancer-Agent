@@ -36,6 +36,7 @@ class IngestionFeatureTest extends TestCase {
         config(['services.collector.token'=>'test-token']);
         $payload=['schema_version'=>'1.0','source'=>'karlancer','items'=>[['type'=>'project','title'=>'پروژه جمع‌آوری‌شده','project_url'=>'https://www.karlancer.com/projects/collector-1','description'=>'شرح کامل','skills'=>['PHP']]]];
         $this->postJson('/api/internal/collector/import',$payload)->assertUnauthorized();
+        $this->withHeader('Authorization','Bearer incorrect-token')->postJson('/api/internal/collector/import',$payload)->assertUnauthorized();
         $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$payload)->assertOk()->assertJsonPath('projects_created',1);
         $this->assertDatabaseHas('projects',['platform'=>'karlancer','external_project_id'=>null,'title'=>'پروژه جمع‌آوری‌شده']);
     }
