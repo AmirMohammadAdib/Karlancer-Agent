@@ -10,7 +10,7 @@ class Project extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'title', 'description', 'budget', 'deadline', 'required_skills', 'discovered_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
+    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'title', 'description', 'budget', 'currency', 'deadline', 'required_skills', 'discovered_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
 
     protected function casts(): array
     {
@@ -20,5 +20,15 @@ class Project extends Model
     public function activityEvents(): HasMany
     {
         return $this->hasMany(ProjectActivityEvent::class);
+    }
+
+    public function isNew(): bool
+    {
+        return $this->decision_status === 'new';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->decision_status === 'rejected';
     }
 }

@@ -12,8 +12,11 @@ Route::middleware('guest')->group(function () {
 });
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
-    Route::get('/dashboard', fn () => view('dashboard', ['counts' => ['new' => Project::where('decision_status', 'new')->count(), 'approved' => Project::where('decision_status', 'approved')->count(), 'rejected' => Project::where('decision_status', 'rejected')->count()]]))->name('dashboard');
-    Route::get('/projects/{status}', [ProjectController::class, 'index'])->name('projects.index');
+    Route::get('/dashboard', fn () => view('dashboard', ['counts' => ['total' => Project::where('platform', 'mock')->count(), 'new' => Project::where('platform', 'mock')->where('decision_status', 'new')->count(), 'approved' => Project::where('platform', 'mock')->where('decision_status', 'approved')->count(), 'rejected' => Project::where('platform', 'mock')->where('decision_status', 'rejected')->count()]]))->name('dashboard');
+    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::get('/projects/status/{status}', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('/projects/{project}/{decision}', [ProjectController::class, 'updateDecision'])->name('projects.decision');
     Route::get('/activity', [ProjectController::class, 'activity'])->name('activity');
     Route::view('/profile', 'placeholder', ['title' => 'پروفایل حرفه‌ای'])->name('profile');

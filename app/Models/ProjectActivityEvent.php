@@ -9,7 +9,7 @@ class ProjectActivityEvent extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['project_id', 'event_type', 'previous_status', 'new_status', 'actor', 'metadata', 'created_at'];
+    protected $fillable = ['project_id', 'actor_id', 'event_type', 'action', 'previous_status', 'new_status', 'actor', 'metadata', 'created_at'];
 
     protected function casts(): array
     {
@@ -19,5 +19,10 @@ class ProjectActivityEvent extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function actorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_id');
     }
 }
