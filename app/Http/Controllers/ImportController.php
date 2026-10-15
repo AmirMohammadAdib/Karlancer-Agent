@@ -11,6 +11,7 @@ class ImportController extends Controller {
     public function sources(): View { return view('imports.sources', ['lastRun'=>ImportRun::where('source','mock')->latest('id')->first()]); }
     public function importMock(): RedirectResponse { $run=ImportRun::create(['source'=>'mock','status'=>'running','started_at'=>now()]); dispatch_sync(new ImportProjectsJob('mock',$run->id)); return back()->with('status','ورود داده‌های آزمایشی انجام شد.'); }
     public function index(): View { return view('imports.index', ['runs'=>ImportRun::latest('id')->paginate(15)]); }
+    public function collectorProjects(): View { return view('imports.collector-projects', ['projects'=>\App\Models\Project::where('platform','karlancer')->latest('last_seen_at')->paginate(12)]); }
     public function manualForm(): View { return view('imports.manual'); }
     public function manualPreview(Request $request): View|RedirectResponse {
         $request->validate(['file'=>['required','file','mimes:json,csv,txt','max:2048']]);

@@ -34,4 +34,5 @@ Route::middleware('auth')->group(function () {
     Route::post('/sources/karlancer/manual/preview', [ImportController::class, 'manualPreview'])->name('sources.karlancer.manual.preview');
     Route::post('/sources/karlancer/manual/confirm', [ImportController::class, 'manualConfirm'])->name('sources.karlancer.manual.confirm');
     Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
+    Route::get('/collector/projects', [ImportController::class, 'collectorProjects'])->name('collector.projects');
 });
