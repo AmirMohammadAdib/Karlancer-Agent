@@ -1,0 +1,4 @@
+[
+  {"external_project_id":"mock-001","canonical_url":"https://mock.local/projects/mock-001","title":"طراحی وب‌سایت فروشگاهی","description":"پیاده‌سازی فروشگاه با Laravel و طراحی رابط کاربری.","budget_min":30000000,"budget_max":50000000,"currency":"IRR","required_skills":["Laravel","PHP","UI/UX"],"published_at":"2026-10-01T09:00:00Z"},
+  {"external_project_id":"mock-002","canonical_url":"https://mock.local/projects/mock-002","title":"ترجمه مستندات فنی","description":"ترجمه فارسی و انگلیسی مستندات نرم‌افزار.","budget_min":8000000,"budget_max":12000000,"currency":"IRR","required_skills":["ترجمه","انگلیسی"],"published_at":"2026-10-02T09:00:00Z"}
+]

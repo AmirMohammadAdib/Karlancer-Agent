@@ -1,0 +1,4 @@
+@extends('layouts.app') @section('content')
+<h1 class="text-2xl font-bold mb-6">منابع ورود پروژه</h1>
+<div class="rounded-xl bg-white border p-6 max-w-2xl"><h2 class="font-bold">منبع آزمایشی محلی</h2><p class="text-sm text-slate-600 mt-2">فقط fixture محلی خوانده می‌شود؛ هیچ درخواست خارجی ارسال نمی‌شود.</p><form method="post" action="{{ route('sources.mock.import') }}" class="mt-5">@csrf<button class="rounded bg-orange px-4 py-2 text-white">اجرای ورود داده آزمایشی</button></form>@if($lastRun)<div class="mt-5 text-sm">آخرین اجرا: {{ $lastRun->status }} | ایجاد: {{ $lastRun->projects_created }} | به‌روزرسانی: {{ $lastRun->projects_updated }} | خطا: {{ count($lastRun->errors ?? []) }}</div>@endif<a class="inline-block mt-5 text-orange-700" href="{{ route('imports.index') }}">مشاهده تاریخچه ورود</a></div>
+@endsection

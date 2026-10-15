@@ -11,11 +11,11 @@ class Project extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'title', 'description', 'budget', 'currency', 'deadline', 'required_skills', 'discovered_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
+    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'canonical_url_hash', 'title', 'description', 'budget', 'budget_min', 'budget_max', 'currency', 'deadline', 'required_skills', 'discovered_at', 'published_at', 'first_seen_at', 'last_seen_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
 
     protected function casts(): array
     {
-        return ['required_skills' => 'array', 'discovered_at' => 'datetime', 'deadline' => 'datetime', 'approved_at' => 'datetime', 'rejected_at' => 'datetime', 'is_demo' => 'boolean'];
+        return ['required_skills' => 'array', 'discovered_at' => 'datetime', 'published_at' => 'datetime', 'first_seen_at' => 'datetime', 'last_seen_at' => 'datetime', 'deadline' => 'datetime', 'approved_at' => 'datetime', 'rejected_at' => 'datetime', 'budget_min' => 'decimal:2', 'budget_max' => 'decimal:2', 'is_demo' => 'boolean'];
     }
 
     public function activityEvents(): HasMany

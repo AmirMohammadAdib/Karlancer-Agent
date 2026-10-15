@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MatchingController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ImportController;
 use App\Models\MatchingProfile;
 use App\Models\Project;
 use Illuminate\Support\Facades\Route;
@@ -27,4 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/recommendations', [MatchingController::class, 'recommendations'])->name('recommendations');
     Route::post('/recommendations/recalculate', [MatchingController::class, 'recalculate'])->name('recommendations.recalculate');
     Route::redirect('/settings', '/matching/settings')->name('settings');
+    Route::get('/sources', [ImportController::class, 'sources'])->name('sources');
+    Route::post('/sources/mock/import', [ImportController::class, 'importMock'])->name('sources.mock.import');
+    Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
 });
