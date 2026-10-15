@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -20,6 +21,11 @@ class Project extends Model
     public function activityEvents(): HasMany
     {
         return $this->hasMany(ProjectActivityEvent::class);
+    }
+
+    public function matchFor(MatchingProfile $profile): HasOne
+    {
+        return $this->hasOne(ProjectMatch::class)->where('matching_profile_id', $profile->id);
     }
 
     public function isNew(): bool
