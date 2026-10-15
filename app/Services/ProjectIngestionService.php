@@ -14,11 +14,16 @@ class ProjectIngestionService {
             foreach ($this->adapter->fetchProjects() as $payload) {
                 $run->increment('projects_fetched');
                 try { $this->upsert($this->adapter->normalizeProject((array) $payload), $run); }
-                catch (\Throwable $e) { $run->increment('projects_skipped'); $errors = $run->errors ?? []; $errors[] = substr($e->getMessage(), 0, 200); $run->update(['errors'=>$errors]); }
+                catch (\Throwable $e) { $run->increment('projects_skipped'); $this->recordError($run, $e); }
             }
             $run->refresh(); $run->update(['status'=>count($run->errors ?? []) ? ($run->projects_created || $run->projects_updated ? 'partial' : 'failed') : 'completed', 'finished_at'=>now()]);
-        } catch (\Throwable $e) { $run->update(['status'=>'failed','finished_at'=>now(),'errors'=>array_merge($run->errors ?? [], [substr($e->getMessage(),0,200)])]); }
+        } catch (\Throwable $e) { $this->recordError($run, $e); $run->update(['status'=>'failed','finished_at'=>now()]); }
         return $run->refresh();
+    }
+    private function recordError(ImportRun $run, \Throwable $exception): void
+    {
+        $message = iconv('UTF-8', 'UTF-8//IGNORE', $exception->getMessage()) ?: get_class($exception);
+        $errors = $run->errors ?? []; $errors[] = mb_substr($message, 0, 200); $run->update(['errors' => $errors]);
     }
     private function upsert(array $data, ImportRun $run): void {
         $hash = $data['canonical_url'] ? hash('sha256', rtrim(strtolower($data['canonical_url']), '/')) : null;

@@ -45,4 +45,12 @@ class IngestionFeatureTest extends TestCase {
         $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'9.0','source'=>'karlancer','items'=>[]])->assertStatus(422);
         $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'1.0','source'=>'karlancer','items'=>[['title'=>'bad','project_url'=>'https://evil.example/projects/x']]])->assertStatus(207)->assertJsonPath('projects_discovered',0);
     }
+    public function test_relative_persian_dates_are_unknown_and_do_not_abort_batch(): void {
+        $records=[]; for($i=1;$i<=20;$i++) $records[]=['external_project_id'=>'batch-'.$i,'canonical_url'=>'https://www.karlancer.com/projects/batch-'.$i,'title'=>'پروژه '.$i,'description'=>'شرح','published_at'=>'۳ ساعت پیش','required_skills'=>[]];
+        dispatch_sync(new ImportProjectsJob('karlancer', null, $records));
+        $run=ImportRun::latest('id')->first();
+        $this->assertSame('completed',$run->status); $this->assertSame(20,$run->projects_fetched); $this->assertSame(20,$run->projects_created); $this->assertSame(0,$run->projects_skipped); $this->assertSame(0,Project::where('platform','karlancer')->whereNotNull('published_at')->count());
+        dispatch_sync(new ImportProjectsJob('karlancer', null, $records));
+        $rerun=ImportRun::latest('id')->first(); $this->assertSame(0,$rerun->projects_created); $this->assertSame(20,$rerun->projects_updated);
+    }
 }
