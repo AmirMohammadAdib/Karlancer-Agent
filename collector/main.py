@@ -13,10 +13,10 @@ def fixture_mode(path):
 def interactive():
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=False); context=browser.new_context(storage_state=None); page=context.new_page(); page.goto('https://www.karlancer.com/panel/notifications',wait_until='domcontentloaded',timeout=30000); input('در مرورگر وارد شوید و پس از نمایش اعلان‌ها Enter بزنید...'); notes=parse_notifications(page.content()); items=[]
+        context=p.chromium.launch_persistent_context(str(PROFILE_DIR), headless=False); page=context.new_page(); page.goto('https://www.karlancer.com/panel/notifications',wait_until='domcontentloaded',timeout=30000); input('در مرورگر وارد شوید و پس از نمایش اعلان‌ها Enter بزنید...'); notes=parse_notifications(page.content()); items=[]
         for n in notes:
             detail=context.new_page(); detail.goto(n['project_url'],wait_until='domcontentloaded',timeout=30000); items.append(parse_project(detail.content(),n['project_url'])); detail.close()
-        result=payload(items); Path('collector-preview.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8'); browser.close(); return result
+        result=payload(items); Path('collector-preview.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8'); context.close(); return result
 if __name__=='__main__':
     ap=argparse.ArgumentParser(); ap.add_argument('--fixture'); ap.add_argument('--send',action='store_true'); args=ap.parse_args(); result=fixture_mode(args.fixture) if args.fixture else interactive(); print(json.dumps(result,ensure_ascii=False,indent=2));
     if args.send:
