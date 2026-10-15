@@ -41,7 +41,13 @@ class MatchingController extends Controller
             $matching->ensureCurrent($project, $profile);
         }
         $threshold = $request->boolean('all') ? 0 : (int) $profile->min_score;
-        $matches = $profile->matches()->with('project')->whereHas('project', fn ($query) => $query->where('platform', 'mock'))->where('score', '>=', $threshold)->orderByDesc('score')->paginate(9)->withQueryString();
+        $matches = $profile->matches()->with('project')->whereHas('project', fn ($query) => $query->where('platform', 'mock'))->where('score', '>=', $threshold);
+        match ($request->query('sort')) {
+            'score_asc' => $matches->orderBy('score'),
+            'newest' => $matches->join('projects', 'projects.id', '=', 'project_matches.project_id')->orderByDesc('projects.created_at')->select('project_matches.*'),
+            default => $matches->orderByDesc('score'),
+        };
+        $matches = $matches->paginate(9)->withQueryString();
 
         return view('matching.recommendations', compact('profile', 'matches', 'threshold'));
     }

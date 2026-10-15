@@ -7,7 +7,7 @@
 @if(!$profile || !$profile->enabled)
     <div class="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-amber-900">matching فعال نیست. ابتدا <a class="font-bold underline" href="{{ route('matching.settings') }}">تنظیمات matching</a> را تکمیل و فعال کنید.</div>
 @else
-    <div class="mb-5 flex gap-3"><a href="{{ route('recommendations') }}" class="rounded-lg bg-orange-100 px-4 py-2 text-sm">امتیاز بالاتر از {{ $threshold }}</a><a href="{{ route('recommendations',['all'=>1]) }}" class="rounded-lg bg-slate-100 px-4 py-2 text-sm">نمایش همه</a></div>
+    <div class="mb-5 flex flex-wrap gap-3"><a href="{{ route('recommendations') }}" class="rounded-lg bg-orange-100 px-4 py-2 text-sm">امتیاز بالاتر از {{ $threshold }}</a><a href="{{ route('recommendations',['all'=>1]) }}" class="rounded-lg bg-slate-100 px-4 py-2 text-sm">نمایش همه</a><a href="{{ route('recommendations',['sort'=>'score_asc']) }}" class="rounded-lg bg-slate-100 px-4 py-2 text-sm">کمترین امتیاز</a><a href="{{ route('recommendations',['sort'=>'newest']) }}" class="rounded-lg bg-slate-100 px-4 py-2 text-sm">جدیدترین</a></div>
     @if($matches->isEmpty())
         <div class="rounded-2xl bg-white p-10 text-center text-slate-500">پروژه‌ای با حداقل امتیاز انتخاب‌شده پیدا نشد.</div>
     @else

@@ -80,8 +80,15 @@ class ProjectMatchingService
         return ['configured' => true, 'compatible' => $compatible, 'currency_compatible' => true, 'points' => $compatible ? 20 : 0, 'label' => $compatible ? 'بودجه و واحد پول سازگار است.' : 'بودجه خارج از بازه ترجیحی است.'];
     }
 
-    private function list(?array $items, bool $short = false): array
+    private function list(mixed $items, bool $short = false): array
     {
+        if (is_string($items)) {
+            $items = json_decode($items, true);
+        }
+        if (! is_array($items)) {
+            $items = [];
+        }
+
         return collect($items ?? [])->map(fn ($item) => $this->normalize((string) $item))->filter(fn ($item) => ! $short || mb_strlen($item) >= 2)->filter()->unique()->values()->all();
     }
 
