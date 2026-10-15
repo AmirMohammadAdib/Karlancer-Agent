@@ -24,7 +24,7 @@ class ProjectIngestionService {
         $hash = $data['canonical_url'] ? hash('sha256', rtrim(strtolower($data['canonical_url']), '/')) : null;
         $query = Project::query()->where('platform', $this->adapter->sourceIdentifier());
         if ($data['external_project_id']) $query->where('external_project_id', $data['external_project_id']); elseif ($hash) $query->where('canonical_url_hash', $hash); else throw new \InvalidArgumentException('External ID or URL is required.');
-        $existing = $query->first(); $now = now(); $attrs = array_merge($data, ['platform'=>$this->adapter->sourceIdentifier(),'canonical_url_hash'=>$hash,'last_seen_at'=>$now,'is_demo'=>true,'discovered_at'=>$now]);
+        $existing = $query->first(); $now = now(); $attrs = array_merge($data, ['platform'=>$this->adapter->sourceIdentifier(),'canonical_url_hash'=>$hash,'last_seen_at'=>$now,'is_demo'=>$this->adapter->sourceIdentifier() === 'mock','discovered_at'=>$now]);
         $attrs['budget'] = $data['budget_min'] !== null || $data['budget_max'] !== null ? trim(($data['budget_min'] !== null ? $data['budget_min'] : '').' - '.($data['budget_max'] !== null ? $data['budget_max'] : '')) : null;
         if (! $existing) { $attrs['first_seen_at']=$now; $attrs['decision_status']='new'; $attrs['availability_status']='available'; Project::create($attrs); $run->increment('projects_created'); return; }
         $changed = collect(['title','description','budget_min','budget_max','currency','required_skills'])->some(fn ($f) => $existing->{$f} != $attrs[$f]);

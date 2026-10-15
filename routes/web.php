@@ -30,5 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/settings', '/matching/settings')->name('settings');
     Route::get('/sources', [ImportController::class, 'sources'])->name('sources');
     Route::post('/sources/mock/import', [ImportController::class, 'importMock'])->name('sources.mock.import');
+    Route::get('/sources/karlancer/manual', [ImportController::class, 'manualForm'])->name('sources.karlancer.manual');
+    Route::post('/sources/karlancer/manual/preview', [ImportController::class, 'manualPreview'])->name('sources.karlancer.manual.preview');
+    Route::post('/sources/karlancer/manual/confirm', [ImportController::class, 'manualConfirm'])->name('sources.karlancer.manual.confirm');
     Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
 });

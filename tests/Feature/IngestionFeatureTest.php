@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Illuminate\Http\UploadedFile;
 class IngestionFeatureTest extends TestCase {
     use RefreshDatabase;
     public function test_mock_fixture_import_is_idempotent_and_records_history(): void {
@@ -23,5 +24,12 @@ class IngestionFeatureTest extends TestCase {
     public function test_import_administration_requires_authentication(): void {
         $this->get('/sources')->assertRedirect('/login');
         $this->actingAs(User::factory()->create())->get('/sources')->assertOk();
+    }
+    public function test_manual_upload_requires_preview_then_confirmation(): void {
+        $admin=User::factory()->create();
+        $payload=json_encode([['external_project_id'=>'real-1','canonical_url'=>'https://www.karlancer.com/project/1','title'=>'پروژه واقعی نمونه','description'=>'شرح','currency'=>'IRR','required_skills'=>['PHP']]], JSON_UNESCAPED_UNICODE);
+        $this->actingAs($admin)->post(route('sources.karlancer.manual.preview'), ['file'=>UploadedFile::fake()->createWithContent('projects.json',$payload)])->assertOk()->assertSee('پروژه واقعی نمونه');
+        $this->actingAs($admin)->post(route('sources.karlancer.manual.confirm'))->assertRedirect(route('imports.index'));
+        $this->assertDatabaseHas('projects',['platform'=>'karlancer','external_project_id'=>'real-1']);
     }
 }
