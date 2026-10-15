@@ -27,8 +27,8 @@ class ProjectIngestionService {
         $existing = $query->first(); $now = now(); $attrs = array_merge($data, ['platform'=>$this->adapter->sourceIdentifier(),'canonical_url_hash'=>$hash,'last_seen_at'=>$now,'is_demo'=>$this->adapter->sourceIdentifier() === 'mock','discovered_at'=>$now]);
         $attrs['budget'] = $data['budget_min'] !== null || $data['budget_max'] !== null ? trim(($data['budget_min'] !== null ? $data['budget_min'] : '').' - '.($data['budget_max'] !== null ? $data['budget_max'] : '')) : null;
         if (! $existing) { $attrs['first_seen_at']=$now; $attrs['decision_status']='new'; $attrs['availability_status']='available'; Project::create($attrs); $run->increment('projects_created'); return; }
-        $changed = collect(['title','description','budget_min','budget_max','currency','required_skills'])->some(fn ($f) => $existing->{$f} != $attrs[$f]);
-        unset($attrs['decision_status'], $attrs['availability_status'], $attrs['approved_at'], $attrs['rejected_at'], $attrs['first_seen_at']); $existing->update($attrs); if ($changed) ProjectMatch::where('project_id',$existing->id)->delete();
+        $changed = collect(['title','description','budget_min','budget_max','currency','required_skills'])->some(fn ($f) => $attrs[$f] !== null && $attrs[$f] !== '' && $existing->{$f} != $attrs[$f]);
+        $updateAttrs = collect($attrs)->except(['decision_status','availability_status','approved_at','rejected_at','first_seen_at'])->filter(fn ($value, $key) => !in_array($key, ['description','budget_min','budget_max','currency','required_skills'], true) || ($value !== null && $value !== '' && $value !== []))->all(); $existing->update($updateAttrs); if ($changed) ProjectMatch::where('project_id',$existing->id)->delete();
         $run->increment('projects_updated');
     }
 }

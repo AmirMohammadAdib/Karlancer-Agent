@@ -32,4 +32,16 @@ class IngestionFeatureTest extends TestCase {
         $this->actingAs($admin)->post(route('sources.karlancer.manual.confirm'))->assertRedirect(route('imports.index'));
         $this->assertDatabaseHas('projects',['platform'=>'karlancer','external_project_id'=>'real-1']);
     }
+    public function test_collector_endpoint_requires_token_and_imports_valid_payload(): void {
+        config(['services.collector.token'=>'test-token']);
+        $payload=['schema_version'=>'1.0','source'=>'karlancer','items'=>[['type'=>'project','title'=>'پروژه جمع‌آوری‌شده','project_url'=>'https://www.karlancer.com/projects/collector-1','description'=>'شرح کامل','skills'=>['PHP']]]];
+        $this->postJson('/api/internal/collector/import',$payload)->assertUnauthorized();
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$payload)->assertOk()->assertJsonPath('projects_created',1);
+        $this->assertDatabaseHas('projects',['platform'=>'karlancer','external_project_id'=>null,'title'=>'پروژه جمع‌آوری‌شده']);
+    }
+    public function test_collector_rejects_external_urls_and_unsupported_schema(): void {
+        config(['services.collector.token'=>'test-token']);
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'9.0','source'=>'karlancer','items'=>[]])->assertStatus(422);
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'1.0','source'=>'karlancer','items'=>[['title'=>'bad','project_url'=>'https://evil.example/projects/x']]])->assertStatus(207)->assertJsonPath('projects_discovered',0);
+    }
 }

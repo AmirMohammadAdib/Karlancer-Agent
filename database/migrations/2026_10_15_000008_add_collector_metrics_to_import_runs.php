@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::table('import_runs', function(Blueprint $table){ $table->string('collector_type',30)->nullable(); $table->unsignedInteger('notifications_inspected')->default(0); $table->unsignedInteger('unique_projects_discovered')->default(0); $table->unsignedInteger('details_succeeded')->default(0); $table->unsignedInteger('details_failed')->default(0); }); } public function down(): void { Schema::table('import_runs',fn(Blueprint $table)=>$table->dropColumn(['collector_type','notifications_inspected','unique_projects_discovered','details_succeeded','details_failed'])); } };

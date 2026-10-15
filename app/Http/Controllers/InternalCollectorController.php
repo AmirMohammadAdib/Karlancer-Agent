@@ -1,0 +1,13 @@
+<?php
+namespace App\Http\Controllers;
+use App\Jobs\ImportProjectsJob; use App\Models\ImportRun; use Illuminate\Http\JsonResponse; use Illuminate\Http\Request;
+class InternalCollectorController extends Controller {
+ public function import(Request $request): JsonResponse {
+  $configured=(string)config('services.collector.token'); if ($configured==='' || !hash_equals($configured,(string)$request->bearerToken())) return response()->json(['message'=>'Unauthorized'],401);
+  if (!str_contains(strtolower((string)$request->header('Content-Type')),'application/json')) return response()->json(['message'=>'Content-Type must be application/json'],415);
+  if ((int)$request->header('Content-Length',0)>2000000) return response()->json(['message'=>'Payload too large'],413);
+  $payload=$request->json()->all(); if (($payload['schema_version']??null)!=='1.0'||($payload['source']??null)!=='karlancer'||!is_array($payload['items']??null)) return response()->json(['message'=>'Unsupported or invalid schema'],422);
+  $records=[];$errors=[];$seen=[]; foreach($payload['items'] as $i=>$item){ if(!is_array($item)||($item['type']??'project')!=='project')continue; $url=trim((string)($item['project_url']??''));$parts=parse_url($url); if(!$parts||($parts['scheme']??'')!=='https'||($parts['host']??'')!=='www.karlancer.com'||!str_starts_with($parts['path']??'','/projects/')){$errors[]='item '.($i+1).': invalid project URL';continue;} $key=rtrim(strtolower($url),'/');if(isset($seen[$key]))continue;$seen[$key]=true;if(trim((string)($item['title']??''))===''){$errors[]='item '.($i+1).': title is required';continue;} $records[]=['external_project_id'=>$item['external_project_id']??null,'canonical_url'=>$url,'title'=>$item['title'],'description'=>$item['description']??'','budget_min'=>$item['budget_min']??null,'budget_max'=>$item['budget_max']??null,'currency'=>$item['currency']??null,'required_skills'=>$item['skills']??[],'published_at'=>$item['published_at']??null]; }
+  $run=ImportRun::create(['source'=>'karlancer','collector_type'=>'playwright','status'=>'running','started_at'=>now(),'notifications_inspected'=>count($payload['items']),'unique_projects_discovered'=>count($records),'details_succeeded'=>count($records),'details_failed'=>count($errors),'errors'=>$errors]); if($records)dispatch_sync(new ImportProjectsJob('karlancer',$run->id,$records));else$run->update(['status'=>'completed','finished_at'=>now()]);$run->refresh(); return response()->json(['status'=>$run->status,'import_run_id'=>$run->id,'notifications_inspected'=>count($payload['items']),'projects_discovered'=>count($records),'projects_created'=>$run->projects_created,'projects_updated'=>$run->projects_updated,'projects_skipped'=>$run->projects_skipped,'errors'=>$errors],$errors?207:200);
+ }
+}
