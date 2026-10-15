@@ -4,6 +4,7 @@
 __pycache__/
 *.py[cod]
 collector-preview.json
+collector-dom-sanitized.html
 .env.*
 !.env.example
 .env.backup
