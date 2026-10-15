@@ -1,6 +1,9 @@
 *.log
 .DS_Store
 .env
+__pycache__/
+*.py[cod]
+collector-preview.json
 .env.*
 !.env.example
 .env.backup
