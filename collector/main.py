@@ -1,4 +1,5 @@
 import argparse,json
+import time
 from datetime import datetime,timezone
 from pathlib import Path
 from .config import BASE_URL,TOKEN,PROFILE_DIR,NAV_TIMEOUT_MS,READY_TIMEOUT_MS,NAV_RETRIES
@@ -23,9 +24,33 @@ def navigate_with_retries(page,url,ready=None,timeout_ms=NAV_TIMEOUT_MS,retries=
 def _body_ready(page,timeout_ms):
     page.wait_for_selector('body',timeout=timeout_ms)
     return bool(page.locator('body').inner_text(timeout=timeout_ms).strip())
-def _notifications_ready(page,timeout_ms):
-    page.wait_for_selector('a[href]',timeout=timeout_ms)
-    return bool(parse_notifications(page.content()))
+def classify_notification_page(url,html):
+    """Classify only sanitized structural signals; never logs page HTML."""
+    from urllib.parse import urlparse
+    from bs4 import BeautifulSoup
+    path=urlparse(url).path
+    soup=BeautifulSoup(html,'html.parser'); candidates=parse_notifications(html)
+    body=soup.body
+    text=' '.join((body.get_text(' ',strip=True) if body else '').split())
+    login=path.rstrip('/').endswith('/login') or bool(soup.select('input[type=password]')) or 'ورود' in text[:300]
+    access_error=any(marker in text.lower() for marker in ('captcha','access denied','forbidden','403','دسترسی غیرمجاز'))
+    if login: kind='login'
+    elif access_error: kind='unexpected'
+    elif path.rstrip('/').endswith('/notifications') and candidates: kind='populated'
+    elif path.rstrip('/').endswith('/notifications') and body and text: kind='empty'
+    elif not body or not text: kind='still_loading'
+    else: kind='unexpected'
+    return {'classification':kind,'path':path or '/','candidate_count':len(candidates)}
+def notification_state(page):
+    return classify_notification_page(page.url,page.content())
+def wait_for_notification_state(page,timeout_ms=READY_TIMEOUT_MS):
+    deadline=time.monotonic()+timeout_ms/1000
+    last=None
+    while time.monotonic()<deadline:
+        last=notification_state(page)
+        if last['classification'] in {'login','populated','empty','unexpected'}: return last
+        page.wait_for_timeout(min(250,max(1,int((deadline-time.monotonic())*1000))))
+    return last or {'classification':'still_loading','path':'/','candidate_count':0}
 def fixture_mode(path):
     data=json.loads(Path(path).read_text(encoding='utf-8')); notifications=parse_notifications(data['notifications_html']); items=[]
     for n in notifications:
@@ -42,10 +67,12 @@ def interactive():
         if not navigate_with_retries(page,'https://www.karlancer.com/panel/notifications',_body_ready):
             raise RuntimeError('صفحه اعلان‌ها بارگذاری نشد؛ مرورگر را بررسی و دوباره اجرا کنید.')
         input('در مرورگر وارد شوید و پس از نمایش اعلان‌ها Enter بزنید...')
-        if not navigate_with_retries(page,'https://www.karlancer.com/panel/notifications',_notifications_ready,retries=1):
-            raise RuntimeError('اعلان‌های پروژه آماده نیستند؛ صفحه را دستی Refresh کنید و collector را دوباره اجرا کنید.')
+        state=wait_for_notification_state(page)
+        if state['classification']=='login': raise RuntimeError(f"هنوز صفحه ورود باز است (path={state['path']})؛ ورود دستی را کامل کنید و دوباره اجرا کنید.")
+        if state['classification']=='still_loading': raise RuntimeError(f"صفحه اعلان‌ها آماده نشد (path={state['path']}, candidates={state['candidate_count']})؛ صفحه را دستی Refresh کنید و دوباره اجرا کنید.")
+        if state['classification']=='unexpected': raise RuntimeError(f"صفحه غیرمنتظره است (path={state['path']}, candidates={state['candidate_count']})؛ به اعلان‌ها برگردید و دوباره اجرا کنید.")
         notes=parse_notifications(page.content())
-        if not notes: raise RuntimeError('هیچ اعلان پروژه‌ای پیدا نشد؛ import انجام نمی‌شود.')
+        if state['classification']=='empty' or not notes: raise RuntimeError(f"صفحه اعلان‌ها آماده است اما پروژه‌ای ندارد (path={state['path']}, candidates={state['candidate_count']})؛ import انجام نمی‌شود.")
         items=[]
         for n in notes:
             detail=context.new_page()
