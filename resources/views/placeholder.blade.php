@@ -1,0 +1,1 @@
+@extends('layouts.app') @section('content')<h1 class="mb-4 text-3xl font-bold">{{ $title }}</h1><div class="rounded-2xl bg-white p-8 text-slate-600 shadow-sm">این بخش در فاز بعد تکمیل می‌شود.</div>@endsection

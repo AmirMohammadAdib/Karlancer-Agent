@@ -1,0 +1,1 @@
+# Playwright is intentionally deferred; no browser is run in Phase 1.
