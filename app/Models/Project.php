@@ -11,7 +11,7 @@ class Project extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'canonical_url_hash', 'title', 'description', 'budget', 'budget_min', 'budget_max', 'currency', 'deadline', 'required_skills', 'discovered_at', 'published_at', 'first_seen_at', 'last_seen_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
+    protected $fillable = ['platform', 'external_project_id', 'canonical_url', 'canonical_url_hash', 'title', 'description', 'budget', 'budget_min', 'budget_max', 'currency', 'category', 'source_status', 'deadline', 'required_skills', 'discovered_at', 'published_at', 'first_seen_at', 'last_seen_at', 'availability_status', 'decision_status', 'approved_at', 'rejected_at', 'is_demo'];
 
     protected function casts(): array
     {

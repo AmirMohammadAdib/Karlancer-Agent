@@ -16,6 +16,22 @@ class MockProjectSourceAdapter implements ProjectSourceAdapter {
         if ($published instanceof DateTimeInterface) $published = $published->format('Y-m-d H:i:s');
         elseif (is_string($published) && preg_match('/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?$/', trim($published))) { try { $published = Carbon::parse($published)->format('Y-m-d H:i:s'); } catch (\Throwable) { $published = null; } }
         else $published = null;
-        return ['external_project_id'=>isset($payload['external_project_id']) ? trim((string) $payload['external_project_id']) : null, 'canonical_url'=>$url, 'title'=>$title, 'description'=>trim((string) ($payload['description'] ?? '')), 'budget_min'=>$number($payload['budget_min'] ?? null), 'budget_max'=>$number($payload['budget_max'] ?? null), 'currency'=>isset($payload['currency']) ? strtoupper(trim((string) $payload['currency'])) : null, 'required_skills'=>$skills, 'published_at'=>$published];
+        $description = trim((string) ($payload['description'] ?? ''));
+        if (in_array(mb_strtolower($description), ['undefined', 'null'], true)) $description = '';
+        $externalId = isset($payload['external_project_id']) ? trim((string) $payload['external_project_id']) : '';
+        if (in_array(mb_strtolower($externalId), ['', 'undefined', 'null'], true)) $externalId = null;
+        return [
+            'external_project_id'=>$externalId,
+            'canonical_url'=>$url,
+            'title'=>$title,
+            'description'=>$description,
+            'budget_min'=>$number($payload['budget_min'] ?? null),
+            'budget_max'=>$number($payload['budget_max'] ?? null),
+            'currency'=>isset($payload['currency']) ? strtoupper(trim((string) $payload['currency'])) : null,
+            'required_skills'=>$skills,
+            'category'=>isset($payload['category']) && trim((string) $payload['category']) !== '' ? trim((string) $payload['category']) : null,
+            'source_status'=>isset($payload['project_status']) && trim((string) $payload['project_status']) !== '' ? trim((string) $payload['project_status']) : null,
+            'published_at'=>$published,
+        ];
     }
 }

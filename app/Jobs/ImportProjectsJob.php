@@ -21,5 +21,11 @@ class ImportProjectsJob implements ShouldQueue, ShouldBeUnique {
         $adapter = match ($this->source) { 'mock' => new MockProjectSourceAdapter(), 'karlancer' => new ManualProjectSourceAdapter($this->records), default => throw new \InvalidArgumentException('Unknown source.') };
         app(ProjectIngestionService::class, ['adapter'=>$adapter])->import($run);
     }
-    public function failed(\Throwable $e): void { if ($this->importRunId && ($run=ImportRun::find($this->importRunId))) $run->update(['status'=>'failed','finished_at'=>now(),'errors'=>[substr($e->getMessage(),0,200)]]); }
+    public function failed(\Throwable $e): void
+    {
+        if ($this->importRunId && ($run = ImportRun::find($this->importRunId))) {
+            $run->increment('projects_failed');
+            $run->update(['status' => 'failed', 'finished_at' => now(), 'errors' => array_values(array_slice(array_merge((array) $run->errors, ['import job failed']), -100))]);
+        }
+    }
 }

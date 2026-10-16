@@ -18,7 +18,8 @@ class IngestionFeatureTest extends TestCase {
         dispatch_sync(new ImportProjectsJob('mock'));
         $second = ImportRun::latest('id')->first();
         $this->assertSame(0, $second->projects_created);
-        $this->assertSame(2, $second->projects_updated);
+        $this->assertSame(0, $second->projects_updated);
+        $this->assertSame(2, $second->projects_skipped);
         $this->assertCount(2, ImportRun::all());
     }
     public function test_import_administration_requires_authentication(): void {
@@ -43,7 +44,7 @@ class IngestionFeatureTest extends TestCase {
     public function test_collector_rejects_external_urls_and_unsupported_schema(): void {
         config(['services.collector.token'=>'test-token']);
         $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'9.0','source'=>'karlancer','items'=>[]])->assertStatus(422);
-        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'1.0','source'=>'karlancer','items'=>[['title'=>'bad','project_url'=>'https://evil.example/projects/x']]])->assertStatus(207)->assertJsonPath('projects_discovered',0);
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'1.0','source'=>'karlancer','items'=>[['title'=>'bad','project_url'=>'https://evil.example/projects/x']]])->assertStatus(422)->assertJsonPath('projects_discovered',0)->assertJsonPath('projects_rejected',1);
     }
     public function test_relative_persian_dates_are_unknown_and_do_not_abort_batch(): void {
         $records=[]; for($i=1;$i<=20;$i++) $records[]=['external_project_id'=>'batch-'.$i,'canonical_url'=>'https://www.karlancer.com/projects/batch-'.$i,'title'=>'پروژه '.$i,'description'=>'شرح','published_at'=>'۳ ساعت پیش','required_skills'=>[]];
@@ -51,6 +52,43 @@ class IngestionFeatureTest extends TestCase {
         $run=ImportRun::latest('id')->first();
         $this->assertSame('completed',$run->status); $this->assertSame(20,$run->projects_fetched); $this->assertSame(20,$run->projects_created); $this->assertSame(0,$run->projects_skipped); $this->assertSame(0,Project::where('platform','karlancer')->whereNotNull('published_at')->count());
         dispatch_sync(new ImportProjectsJob('karlancer', null, $records));
-        $rerun=ImportRun::latest('id')->first(); $this->assertSame(0,$rerun->projects_created); $this->assertSame(20,$rerun->projects_updated);
+        $rerun=ImportRun::latest('id')->first(); $this->assertSame(0,$rerun->projects_created); $this->assertSame(0,$rerun->projects_updated); $this->assertSame(20,$rerun->projects_skipped);
+    }
+
+    public function test_collector_accounts_twenty_items_and_is_idempotent(): void {
+        config(['services.collector.token'=>'test-token']);
+        $items=[]; for ($i=1; $i<=20; $i++) $items[]=['type'=>'project','title'=>'پروژه '.$i,'project_url'=>'https://www.karlancer.com/projects/account-'.$i,'description'=>'شرح '.$i,'skills'=>['PHP']];
+        $payload=['schema_version'=>'1.0','source'=>'karlancer','items'=>$items];
+        $first=$this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$payload);
+        $first->assertOk()->assertJsonPath('status','completed')->assertJsonPath('projects_fetched',20)->assertJsonPath('projects_created',20)->assertJsonPath('projects_skipped',0);
+        $second=$this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$payload);
+        $second->assertOk()->assertJsonPath('projects_fetched',20)->assertJsonPath('projects_created',0)->assertJsonPath('projects_skipped',20);
+        $this->assertSame(20,Project::where('platform','karlancer')->count());
+    }
+
+    public function test_invalid_item_is_rejected_without_stopping_valid_items(): void {
+        config(['services.collector.token'=>'test-token']);
+        $items=[['type'=>'project','title'=>'پروژه معتبر','project_url'=>'https://www.karlancer.com/projects/valid-1','description'=>'شرح']];
+        for ($i=2; $i<=20; $i++) $items[]=['type'=>'project','title'=>'پروژه '.$i,'project_url'=>'https://www.karlancer.com/projects/valid-'.$i];
+        $items[7]=['type'=>'project','title'=>'پروژه خراب','project_url'=>'https://evil.example/projects/nope'];
+        $response=$this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',['schema_version'=>'1.0','source'=>'karlancer','items'=>$items]);
+        $response->assertStatus(207)->assertJsonPath('status','partial')->assertJsonPath('projects_fetched',20)->assertJsonPath('projects_created',19)->assertJsonPath('projects_rejected',1)->assertJsonCount(1,'errors');
+        $this->assertSame(19,Project::where('platform','karlancer')->count());
+    }
+
+    public function test_failed_detail_does_not_store_notification_title_or_erase_existing_data(): void {
+        config(['services.collector.token'=>'test-token']);
+        $valid=['schema_version'=>'1.0','source'=>'karlancer','items'=>[['type'=>'project','title'=>'عنوان واقعی','project_url'=>'https://www.karlancer.com/projects/preserve-1','description'=>'شرح معتبر','budget_min'=>100,'skills'=>['Laravel']]]];
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$valid)->assertOk();
+        $failed=['schema_version'=>'1.0','source'=>'karlancer','items'=>[['type'=>'project','title'=>'پروژه ای مطابق با توانایی شما با عنوان «عنوان واقعی» ثبت گردید.','project_url'=>'https://www.karlancer.com/projects/preserve-1','description'=>null,'skills'=>[],'extraction_diagnostics'=>['status'=>'failed']]]];
+        $this->withHeader('Authorization','Bearer test-token')->postJson('/api/internal/collector/import',$failed)->assertStatus(422)->assertJsonPath('projects_rejected',1);
+        $this->assertDatabaseHas('projects',['canonical_url'=>'https://www.karlancer.com/projects/preserve-1','title'=>'عنوان واقعی','description'=>'شرح معتبر']);
+    }
+
+    public function test_imported_projects_are_visible_in_existing_management_pages(): void {
+        $project=Project::factory()->create(['platform'=>'karlancer','decision_status'=>'new','title'=>'پروژه واردشده','description'=>'شرح واردشده','canonical_url'=>'https://www.karlancer.com/projects/ui-1']);
+        $admin=User::factory()->create();
+        $this->actingAs($admin)->get('/projects/status/new')->assertOk()->assertSee('پروژه واردشده');
+        $this->actingAs($admin)->get('/projects/'.$project->id)->assertOk()->assertSee('شرح واردشده')->assertSee('www.karlancer.com/projects/ui-1');
     }
 }

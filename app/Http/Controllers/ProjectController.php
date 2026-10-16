@@ -16,7 +16,7 @@ class ProjectController extends Controller
     public function index(Request $request, string $status = 'new'): View
     {
         abort_unless(in_array($status, ['new', 'approved', 'rejected'], true), 404);
-        $query = Project::query()->where('decision_status', $status)->where('platform', 'mock');
+        $query = Project::query()->where('decision_status', $status);
         $search = trim((string) $request->query('q'));
         if ($search !== '') {
             $query->where(fn ($builder) => $builder->where('title', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%"));
@@ -52,8 +52,6 @@ class ProjectController extends Controller
 
     public function show(Project $project): View
     {
-        abort_unless($project->platform === 'mock', 404);
-
         return view('projects.show', ['project' => $project->load(['activityEvents' => fn ($query) => $query->with('actorUser')->oldest('created_at')])]);
     }
 
